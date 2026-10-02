@@ -1,0 +1,166 @@
+! Running-config del SW-A - P3 Infraestructura 1 - Jose Gabriel Feliz Maria 2025-0742
+SW-A#show running-config
+Building configuration...
+
+Current configuration : 2950 bytes
+!
+! Last configuration change at 01:37:31 UTC Fri Oct 2 2026
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+service compress-config
+!
+hostname SW-A
+!
+boot-start-marker
+boot-end-marker
+!
+!
+enable secret 5 $1$19.A$tDtoAKesYeXBKWpdwOvNb.
+!
+username admin privilege 15 secret 5 $1$kKft$5gCex6QL/FFhOdnpsCkGq.
+no aaa new-model
+!
+!
+!
+!
+!
+!
+ip dhcp excluded-address 10.7.42.1 10.7.42.9
+ip dhcp excluded-address 10.7.42.129 10.7.42.137
+!
+ip dhcp pool VLAN10-USUARIOS
+ network 10.7.42.0 255.255.255.128
+ default-router 10.7.42.1
+ dns-server 10.7.43.17
+!
+ip dhcp pool VLAN20-ADMINISTRACION
+ network 10.7.42.128 255.255.255.128
+ default-router 10.7.42.129
+ dns-server 10.7.43.17
+!
+!
+no ip domain-lookup
+ip domain-name itla.lab
+ip cef
+no ipv6 cef
+!
+!
+!
+spanning-tree mode pvst
+spanning-tree extend system-id
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface Ethernet0/0
+ description ENLACE-FGT-DMZ-port2
+ switchport access vlan 99
+ switchport mode access
+ spanning-tree portfast edge
+!
+interface Ethernet0/1
+ description USUARIO-VLAN10 (Windows 10 - Cloud2)
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security maximum 3
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security mac-address sticky 000c.292b.94c3
+ switchport port-security mac-address sticky 000c.29ce.025e
+ switchport port-security
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+!
+interface Ethernet0/2
+ description USUARIO-VLAN20 (PC administrador - Cloud4)
+ switchport access vlan 20
+ switchport mode access
+ switchport port-security maximum 3
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security mac-address sticky 000c.29ce.0272
+ switchport port-security mac-address sticky 0050.56c0.0008
+ switchport port-security
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+!
+interface Ethernet0/3
+ description SIN-USO
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface Vlan10
+ description GATEWAY-VLAN10-USUARIOS
+ ip address 10.7.42.1 255.255.255.128
+!
+interface Vlan20
+ description GATEWAY-VLAN20-ADMINISTRACION
+ ip address 10.7.42.129 255.255.255.128
+!
+interface Vlan99
+ description ENLACE-FORTIGATE
+ ip address 10.7.43.18 255.255.255.252
+!
+ip forward-protocol nd
+!
+ip http server
+!
+ip route 0.0.0.0 0.0.0.0 10.7.43.17
+ip ssh version 2
+ip ssh server algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+ip ssh client algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+!
+!
+access-list 20 remark Solo la VLAN 20 (administracion) administra el switch
+access-list 20 permit 10.7.42.128 0.0.0.127
+!
+!
+!
+control-plane
+!
+banner motd ^CSW-A - Acceso restringido. P3 Infra 1 - 2025-0742^C
+!
+line con 0
+ password 7 110A1016141D
+ logging synchronous
+ login
+line aux 0
+line vty 0 4
+ access-class 20 in
+ login local
+ transport input ssh
+!
+!
+!
+end
+
+SW-A#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Et0/1              3            2                  0         Restrict
+      Et0/2              3            2                  0         Restrict
+---------------------------------------------------------------------------
+Total Addresses in System (excluding one mac per port)     : 2
+Max Addresses limit in System (excluding one mac per port) : 4096
+SW-A#show ip dhcp binding
+Bindings from all pools not associated with VRF:
+IP address      Client-ID/              Lease expiration        Type       State      Interface
+                Hardware address/
+                User name
+10.7.42.10       0100.0c29.2b94.c3       Oct 03 2026 01:39 AM    Automatic  Active     Vlan10

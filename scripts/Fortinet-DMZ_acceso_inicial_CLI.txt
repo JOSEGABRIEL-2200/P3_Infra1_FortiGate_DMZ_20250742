@@ -1,0 +1,17 @@
+# =====================================================================
+# Fortinet-DMZ - FortiGate VM - P3 Infraestructura 1
+# Jose Gabriel Feliz Maria - 2025-0742
+# Acceso inicial por consola (unica parte por CLI): IP de gestion en
+# port1 y acceso HTTP para abrir la GUI. El resto se configura por GUI.
+# Login inicial: admin / (sin contrasena) -> pide una contrasena nueva.
+# =====================================================================
+config system interface
+    edit "port1"
+        set mode static
+        set ip 192.168.182.60 255.255.255.0
+        set allowaccess ping https http ssh
+    next
+end
+config system global
+    set admin-https-redirect disable
+end

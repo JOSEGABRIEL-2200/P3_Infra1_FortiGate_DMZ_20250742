@@ -1,0 +1,64 @@
+# Estado de los contenedores (servidores de la DMZ) en el Kali - P3 Infraestructura 1
+# Jose Gabriel Feliz Maria - 2025-0742
+$ sudo docker ps
+CONTAINER ID   IMAGE          COMMAND       CREATED       STATUS          PORTS     NAMES
+f225414df1c6   srv-db-0742    "/start.sh"   6 hours ago   Up 10 minutes             db-server
+e42c277fbc53   srv-web-0742   "/start.sh"   6 hours ago   Up 10 minutes             web-inventario
+7760dd765b70   srv-web-0742   "/start.sh"   6 hours ago   Up 10 minutes             web-caja
+
+$ sudo docker network inspect dmz_net
+[
+    {
+        "Name": "dmz_net",
+        "Id": "3c9a1d41cd6dac67f07c7cfdd419a856c7cf70e963b4c009c47f96983ffb05ab",
+        "Created": "2026-10-01T15:30:25.733559919-04:00",
+        "Scope": "local",
+        "Driver": "macvlan",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.7.43.0/28",
+                    "Gateway": "10.7.43.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "7760dd765b7009edccc181d6fb1877685ca1953d48907a4d6b292f1740361b0b": {
+                "Name": "web-caja",
+                "EndpointID": "f10a913dcfd2094dc096bd5df68d71ae931e4545fdc9faa29efc0ed4631f1e8a",
+                "MacAddress": "42:f3:d0:59:66:92",
+                "IPv4Address": "10.7.43.2/28",
+                "IPv6Address": ""
+            },
+            "e42c277fbc53170e438028f43f50498e732b4c55a9182ddef3cdc6db7e122e9b": {
+                "Name": "web-inventario",
+                "EndpointID": "f127244c482fe00edf31bd7a7fce19dc680cba6785bd17a618951e63b7234713",
+                "MacAddress": "b2:ef:b4:c1:93:ac",
+                "IPv4Address": "10.7.43.3/28",
+                "IPv6Address": ""
+            },
+            "f225414df1c6a52d6ab2381efcc29c5659967c9c1755ec1897c74c240fcb6a36": {
+                "Name": "db-server",
+                "EndpointID": "59adcdf8db5338b1ac6771fb78b3b9fecf8d65de82590e49392585f619ae4337",
+                "MacAddress": "0a:f4:69:b7:34:52",
+                "IPv4Address": "10.7.43.4/28",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "parent": "eth1"
+        },
+        "Labels": {}
+    }
+]
