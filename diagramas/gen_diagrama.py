@@ -3,8 +3,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, Ellipse, FancyArrowPatch
 
-fig, ax = plt.subplots(figsize=(16, 11), dpi=150)
-ax.set_xlim(0, 160); ax.set_ylim(0, 110); ax.axis("off")
+fig, ax = plt.subplots(figsize=(19.4, 11), dpi=150)
+ax.set_xlim(0, 194); ax.set_ylim(0, 110); ax.axis("off")
 fig.patch.set_facecolor("white")
 
 INK = "#1f2937"; MUTED = "#6b7280"
@@ -28,9 +28,9 @@ def link(p1, p2, label=None, color=INK, lw=2.2, ls="-", off=(0, 1.8), fs=8.5):
                 fontsize=fs, color=MUTED, zorder=5, bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none"))
 
 
-ax.text(80, 107, "P3 · Infraestructura 1 — Servidores en DMZ con FortiGate",
+ax.text(97, 107, "P3 · Infraestructura 1 — Servidores en DMZ con FortiGate",
         ha="center", fontsize=17, fontweight="bold", color=INK)
-ax.text(80, 103.3, "Jose Gabriel Feliz Maria · Matrícula 2025-0742 · Seguridad de Redes (ITLA)",
+ax.text(97, 103.3, "Jose Gabriel Feliz Maria · Matrícula 2025-0742 · Seguridad de Redes (ITLA)",
         ha="center", fontsize=10.5, color=MUTED)
 
 # Internet
@@ -42,31 +42,35 @@ ax.text(66, 90.2, "192.168.182.0/24 · gestión + NAT", ha="center", fontsize=8.
 box(48, 56, 36, 24, "Fortinet-DMZ (FortiGate)", ["port1 WAN  192.168.182.60/24", "port2 LAN  10.7.43.17/30",
                                                  "port3 DMZ  10.7.43.1/28", "3 políticas · 2 rutas · DNS"], C_FGT, tfs=11.5)
 # Switch
-box(4, 56, 34, 24, "SW-A (Cisco, capa 3)", ["Vlan10  10.7.42.1/25", "Vlan20  10.7.42.129/25",
+box(4, 56, 34, 24, "SW-A (Cisco, capa 3)", ["Switch de los usuarios", "Vlan10  10.7.42.1/25", "Vlan20  10.7.42.129/25",
                                            "Vlan99  10.7.43.18/30", "DHCP · port-security"], C_SW, tfs=11.5)
+# Switch de la DMZ
+box(96, 56, 34, 24, "SW-B (Cisco, capa 2)", ["Switch de los servidores", "VLAN 30 SERVIDORES-DMZ", "Vlan30  10.7.43.11/28",
+                                              "port-security · BPDU Guard", "puertos sin uso apagados"], C_SW, tfs=11.5)
 # Users
 box(2, 22, 27, 21, "Usuario VLAN 10", ["VM Windows 10", "DHCP 10.7.42.10", "Cloud2 · e0/1"], C_USR, fs=8.8, tfs=11)
 box(33, 22, 27, 21, "Usuario VLAN 20", ["PC administrador", "DHCP 10.7.42.138", "Cloud4 · e0/2"], C_ADM, fs=8.8, tfs=11)
 
 # DMZ zone
-ax.add_patch(FancyBboxPatch((98, 16), 58, 70, boxstyle="round,pad=0.5,rounding_size=2.5",
+ax.add_patch(FancyBboxPatch((140, 16), 50, 70, boxstyle="round,pad=0.5,rounding_size=2.5",
                             linewidth=2.2, edgecolor=C_WEB, facecolor="#fffbeb", ls="--", zorder=1))
-ax.text(127, 82.2, "DMZ 10.7.43.0/28 (Cloud1)", ha="center", fontsize=12.5, fontweight="bold", color=C_WEB)
-ax.text(127, 78.4, "Kali = host de contenedores Docker (10.7.43.10)", ha="center", fontsize=8.8, color=INK,
+ax.text(165, 82.2, "DMZ 10.7.43.0/28 (Cloud1)", ha="center", fontsize=12.5, fontweight="bold", color=C_WEB)
+ax.text(165, 78.4, "Kali = host Docker (10.7.43.10)", ha="center", fontsize=8.8, color=INK,
         family="DejaVu Sans Mono")
-box(104, 59, 46, 14, "web-caja", ["Sistema de Caja · 10.7.43.2", "nginx :80 · SSH :22"], C_OK, fs=8.8, tfs=11)
-box(104, 40, 46, 14, "web-inventario", ["Sistema de Inventario · 10.7.43.3", "nginx :80 · SSH :22"], C_WEB, fs=8.8, tfs=11)
-box(104, 21, 46, 14, "db-server", ["Base de datos · 10.7.43.4", "MariaDB :3306 · SSH :22"], C_DB, fs=8.8, tfs=11)
+box(144, 59, 42, 14, "web-caja", ["Sistema de Caja · 10.7.43.2", "nginx :80 · SSH :22"], C_OK, fs=8.8, tfs=11)
+box(144, 40, 42, 14, "web-inventario", ["Sist. de Inventario · 10.7.43.3", "nginx :80 · SSH :22"], C_WEB, fs=8.8, tfs=11)
+box(144, 21, 42, 14, "db-server", ["Base de datos · 10.7.43.4", "MariaDB :3306 · SSH :22"], C_DB, fs=8.8, tfs=11)
 
 # Links
 link((66, 80.5), (66, 86.2), "port1", off=(5, 0))
 link((38.5, 68), (47.5, 68), "e0/0 ↔ port2", off=(0, 2.4), fs=7.8)
-link((84.5, 68), (97.5, 68), "port3", off=(0, 2.2))
+link((84.5, 68), (95.5, 68), "port3 ↔ e0/0", off=(0, 2.4), fs=7.8)
+link((130.5, 68), (139.5, 68), "e0/1", off=(0, 2.2))
 link((15, 55.5), (15, 43.5), "e0/1", off=(4, 0))
 link((27, 55.5), (46, 43.5), "e0/2", off=(4.5, 0.5))
 
 # Policy legend
-ax.add_patch(FancyBboxPatch((2, 1.5), 92, 16, boxstyle="round,pad=0.4,rounding_size=1.5",
+ax.add_patch(FancyBboxPatch((2, 1.5), 128, 16, boxstyle="round,pad=0.4,rounding_size=1.5",
                             linewidth=1.2, edgecolor=C_MG, facecolor="#f9fafb", zorder=1))
 rows = [
     (C_USR, "VLAN 10 → DMZ", "solo web (HTTP/HTTPS) · Web Filter bloquea Inventario con aviso"),

@@ -1,0 +1,147 @@
+! Running-config del SW-B - P3 Infraestructura 1 - Jose Gabriel Feliz Maria 2025-0742
+SW-B#show running-config
+Building configuration...
+
+Current configuration : 2027 bytes
+!
+! Last configuration change at 20:02:43 UTC Tue Oct 6 2026
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+service compress-config
+!
+hostname SW-B
+!
+boot-start-marker
+boot-end-marker
+!
+!
+enable secret 5 $1$uome$Oh./GLDbhcKYpVEn8X0my1
+!
+username admin privilege 15 secret 5 $1$r2Fe$DB5OXAm1BT4r7f7mhR6gV0
+no aaa new-model
+!
+!
+!
+!
+!
+no ip routing
+!
+!
+!
+no ip domain-lookup
+ip domain-name itla.lab
+no ip cef
+no ipv6 cef
+!
+!
+!
+spanning-tree mode pvst
+spanning-tree extend system-id
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface Ethernet0/0
+ description ENLACE-FGT-DMZ-port3
+ switchport access vlan 30
+ switchport mode access
+ spanning-tree portfast edge
+!
+interface Ethernet0/1
+ description SERVIDORES-DMZ (host Docker y 3 servidores - Cloud1)
+ switchport access vlan 30
+ switchport mode access
+ switchport port-security maximum 10
+ switchport port-security violation restrict
+ switchport port-security aging time 10
+ switchport port-security aging type inactivity
+ switchport port-security
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+!
+interface Ethernet0/2
+ description SIN-USO
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface Ethernet0/3
+ description SIN-USO
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface Vlan30
+ description GESTION-SW-B
+ ip address 10.7.43.11 255.255.255.240
+ no ip route-cache
+!
+ip default-gateway 10.7.43.1
+ip forward-protocol nd
+!
+no ip http server
+!
+ip ssh version 2
+ip ssh server algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+ip ssh client algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+!
+!
+access-list 20 remark Solo la VLAN 20 (administracion) administra el switch
+access-list 20 permit 10.7.42.128 0.0.0.127
+!
+!
+!
+control-plane
+!
+banner motd ^CSW-B - Acceso restringido. P3 Infra 1 - 2025-0742^C
+!
+line con 0
+ password 7 104D000A0618
+ logging synchronous
+ login
+line aux 0
+line vty 0 4
+ access-class 20 in
+ login local
+ transport input ssh
+!
+!
+!
+end
+
+SW-B#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Et0/1             10            4                  0         Restrict
+---------------------------------------------------------------------------
+Total Addresses in System (excluding one mac per port)     : 3
+Max Addresses limit in System (excluding one mac per port) : 4096
+
+SW-B#show port-security address
+               Secure Mac Address Table
+-----------------------------------------------------------------------------
+Vlan    Mac Address       Type                          Ports   Remaining Age
+                                                                   (mins)
+----    -----------       ----                          -----   -------------
+  30    000c.29a8.9bd3    SecureDynamic                 Et0/1       10 (I)
+  30    220f.d6fc.88b2    SecureDynamic                 Et0/1       10 (I)
+  30    3a2e.40fa.8bef    SecureDynamic                 Et0/1       10 (I)
+  30    aa7c.4813.7163    SecureDynamic                 Et0/1       10 (I)
+-----------------------------------------------------------------------------
+Total Addresses in System (excluding one mac per port)     : 3
+Max Addresses limit in System (excluding one mac per port) : 4096

@@ -19,7 +19,7 @@ En el video se muestra la hora y fecha del sistema, el rostro y la voz del autor
 2. [Topología](#2-topología)
 3. [Direccionamiento IP](#3-direccionamiento-ip)
 4. [Decisiones de Diseño](#4-decisiones-de-diseño)
-5. [Switch SW-A: VLAN, DHCP y Seguridad Básica](#5-switch-sw-a-vlan-dhcp-y-seguridad-básica)
+5. [Switches SW-A y SW-B: VLAN, DHCP y Seguridad Básica](#5-switches-sw-a-y-sw-b-vlan-dhcp-y-seguridad-básica)
 6. [Servidores de la DMZ (Contenedores Docker)](#6-servidores-de-la-dmz-contenedores-docker)
 7. [FortiGate: Red y DMZ (GUI)](#7-fortigate-red-y-dmz-gui)
 8. [FortiGate: Objetos y Políticas (GUI)](#8-fortigate-objetos-y-políticas-gui)
@@ -42,7 +42,7 @@ Proteger tres servidores (dos servidores web y uno de base de datos) colocándol
 4. **SSH solo desde la VLAN 20.** La VLAN 20 (administración) es la única que puede entrar por SSH a los servidores.
 5. **VLAN 10 restringida al Sistema de Inventario.** El usuario de la VLAN 10 no puede abrir ese servidor web y **ve un aviso de que violó una política** cuando lo intenta.
 
-Toda la configuración y demostración del FortiGate se hizo por **interfaz gráfica (GUI)**; solo el acceso inicial se hizo por consola. El switch y los servidores se configuraron por CLI.
+Toda la configuración y demostración del FortiGate se hizo por **interfaz gráfica (GUI)**; solo el acceso inicial se hizo por consola. Los dos switches y los servidores se configuraron por CLI.
 
 ---
 
@@ -57,8 +57,9 @@ Topología montada en PNETLab:
 | Equipo | Rol |
 |---|---|
 | **Fortinet-DMZ** | FortiGate: separa Internet, la LAN de usuarios y la DMZ, y aplica todas las políticas |
-| **SW-A** | Switch Cisco IOL: VLAN 10 y VLAN 20, sus gateways, DHCP y seguridad básica |
-| **DMZ (Cloud1)** | Red de la DMZ: el Kali (host de contenedores) con los 3 servidores |
+| **SW-A** | Switch Cisco IOL de los usuarios: VLAN 10 y VLAN 20, sus gateways, DHCP y seguridad básica |
+| **SW-B** | Switch Cisco IOL de la DMZ: VLAN 30 de los servidores y seguridad básica |
+| **DMZ (Cloud1)** | Red de la DMZ: el Kali (host de contenedores) con los 3 servidores, conectado al SW-B |
 | **web-caja** | Web Server: Sistema de Caja |
 | **web-inventario** | Web Server: Sistema de Inventario |
 | **db-server** | DB Server (MariaDB) |
@@ -76,7 +77,7 @@ Direccionamiento basado en la matrícula **2025-0742**: `10.7.42.0/24` para los 
 |---|---|---|---|
 | VLAN 10 – Usuarios | `10.7.42.0/25` | `10.7.42.1` (SW-A) | DHCP `10.7.42.10 – 10.7.42.126` |
 | VLAN 20 – Administración | `10.7.42.128/25` | `10.7.42.129` (SW-A) | DHCP `10.7.42.138 – 10.7.42.254` |
-| DMZ – Servidores | `10.7.43.0/28` | `10.7.43.1` (FortiGate) | Servidores `.2`, `.3`, `.4` · host Docker `.10` |
+| DMZ – Servidores (VLAN 30 en SW-B) | `10.7.43.0/28` | `10.7.43.1` (FortiGate) | Servidores `.2`, `.3`, `.4` · host Docker `.10` · SW-B `.11` |
 | Enlace FortiGate ↔ SW-A | `10.7.43.16/30` | — | FortiGate `.17` · SW-A `.18` |
 | Internet / gestión | `192.168.182.0/24` | `192.168.182.2` | port1 del FortiGate `.60` |
 
@@ -86,6 +87,7 @@ Direccionamiento basado en la matrícula **2025-0742**: `10.7.42.0/24` para los 
 | Fortinet-DMZ | port2 (LAN_USUARIOS) | `10.7.43.17/30` |
 | Fortinet-DMZ | port3 (DMZ_SERVIDORES) | `10.7.43.1/28` |
 | SW-A | Vlan10 · Vlan20 · Vlan99 | `10.7.42.1/25` · `10.7.42.129/25` · `10.7.43.18/30` |
+| SW-B | Vlan30 (gestión) | `10.7.43.11/28` |
 | web-caja | eth0 | `10.7.43.2/28` |
 | web-inventario | eth0 | `10.7.43.3/28` |
 | db-server | eth0 | `10.7.43.4/28` |
@@ -105,14 +107,19 @@ La licencia de evaluación de FortiGate VM permite como máximo **3 interfaces, 
 | Políticas | 3 | VLAN 10 → DMZ · VLAN 20 → DMZ · DMZ → actualizaciones |
 | Rutas | 3 | Ruta por defecto · ruta hacia las VLAN (2 en total) |
 
-- **Las VLAN las enruta el switch.** Como el FortiGate no puede tener una interfaz por VLAN, el SW-A trabaja en capa 3: es el gateway y el servidor DHCP de la VLAN 10 y la VLAN 20, y envía todo hacia el FortiGate por un solo enlace. El FortiGate distingue cada VLAN por su red de origen.
+- **Las VLAN de los usuarios las enruta el SW-A.** Como el FortiGate no puede tener una interfaz por VLAN, el SW-A trabaja en capa 3: es el gateway y el servidor DHCP de la VLAN 10 y la VLAN 20, y envía todo hacia el FortiGate por un solo enlace. El FortiGate distingue cada VLAN por su red de origen.
+- **Un switch por zona.** El SW-A atiende a los usuarios y el SW-B a los servidores de la DMZ. El SW-B trabaja solo en capa 2 y su único camino hacia otras redes es el port3 del FortiGate, así que no existe forma de llegar a la DMZ sin pasar por el firewall.
 - **La protección contra fugas no gasta políticas.** No existe ninguna política desde la DMZ hacia la LAN, así que el *Implicit Deny* bloquea ese tráfico, y se activó su registro para poder demostrarlo.
 - **El DNS no gasta políticas.** El FortiGate actúa como servidor DNS de la DMZ y de los usuarios.
 - **Los usuarios no tienen salida a Internet.** La práctica no lo pide, y así las 3 políticas disponibles se dedican a los requisitos de seguridad.
 
 ---
 
-## 5. Switch SW-A: VLAN, DHCP y Seguridad Básica
+## 5. Switches SW-A y SW-B: VLAN, DHCP y Seguridad Básica
+
+La topología tiene dos switches Cisco, uno por zona. No hay ningún enlace entre ellos: todo lo que va de los usuarios a los servidores pasa por el FortiGate.
+
+### 5.1 SW-A: switch de los usuarios (capa 3)
 
 - **VLAN 10 (USUARIOS)** en `e0/1`, **VLAN 20 (ADMINISTRACION)** en `e0/2`, **VLAN 99 (ENLACE-FORTIGATE)** en `e0/0` y **VLAN 999 (SIN-USO)** para el puerto libre.
 - **Gateways (SVI) y ruteo:** `Vlan10 10.7.42.1/25`, `Vlan20 10.7.42.129/25`, `Vlan99 10.7.43.18/30` y ruta por defecto hacia el FortiGate (`10.7.43.17`).
@@ -128,11 +135,35 @@ La licencia de evaluación de FortiGate VM permite como máximo **3 interfaces, 
 
 Script: [`scripts/SW-A_config.txt`](scripts/SW-A_config.txt)
 
+### 5.2 SW-B: switch de la DMZ (capa 2)
+
+- **VLAN 30 (SERVIDORES-DMZ)** en `e0/0` (enlace al port3 del FortiGate) y `e0/1` (servidores), y **VLAN 999 (SIN-USO)** para los puertos libres.
+- **Solo capa 2:** el enrutamiento está apagado (`no ip routing`).
+- **Gestión:** `Vlan30 10.7.43.11/28`, con el FortiGate como gateway.
+- **Seguridad básica:**
+  - **Port-security** en el puerto de los servidores (máximo 10 MAC, violación *restrict*). Por ese puerto llegan el host de contenedores y los tres servidores, cada uno con su propia MAC. Las direcciones se aprenden de forma dinámica y caducan a los 10 minutos de inactividad (ver el problema 11.6).
+  - **PortFast** y **BPDU Guard** en el puerto de los servidores.
+  - Puertos sin uso (`e0/2` y `e0/3`) en la VLAN 999 y apagados.
+  - `enable secret`, `service password-encryption`, banner, contraseña de consola y servidor HTTP desactivado.
+  - Administración remota solo por **SSH v2**, con usuario local y **solo desde la VLAN 20** (`access-class 20`). Ese acceso además tiene que pasar por la política `VLAN20_ADMIN_DMZ` del FortiGate.
+
+![VLAN del SW-B](screenshots/27_sw-b_vlan_brief.png)
+
+El SW-B llega al FortiGate, al host y a los tres servidores, y el puerto de los servidores tiene aprendidas sus cuatro direcciones:
+
+![SW-B: pings y port-security](screenshots/26_sw-b_ping_y_port_security.png)
+
+Desde la VLAN 20 (administración) responden un servidor y el propio SW-B, pasando por el FortiGate:
+
+![Ping desde la VLAN 20 a un servidor y al SW-B](screenshots/28_vlan20_ping_servidor_y_sw-b.png)
+
+Script: [`scripts/SW-B_config.txt`](scripts/SW-B_config.txt)
+
 ---
 
 ## 6. Servidores de la DMZ (Contenedores Docker)
 
-Los tres servidores son **contenedores Docker** que corren en el Kali, que está conectado a la DMZ (VMnet2 → Cloud1 → port3 del FortiGate). Se usa una red Docker de tipo **macvlan** sobre la interfaz `eth1` del Kali, así que cada contenedor tiene **su propia IP y su propia MAC** en la red de la DMZ: para el FortiGate son tres servidores independientes.
+Los tres servidores son **contenedores Docker** que corren en el Kali, que está conectado a la DMZ (VMnet2 → Cloud1 → SW-B → port3 del FortiGate). Se usa una red Docker de tipo **macvlan** sobre la interfaz `eth1` del Kali, así que cada contenedor tiene **su propia IP y su propia MAC** en la red de la DMZ: para el FortiGate son tres servidores independientes.
 
 | Servidor | IP | Servicios | Imagen |
 |---|---|---|---|
@@ -247,6 +278,8 @@ El perfil se aplica solo en la política `VLAN10_WEB_DMZ`, así que la VLAN 20 n
 | 9 | **DMZ solo actualizaciones** | `apt-get update` en `web-caja` y `apt update` en el Kali | ✅ Descargan de `deb.debian.org` y `kali.download` |
 | 10 | **DMZ sin Internet abierto** | `curl https://www.google.com` desde `web-caja` | ✅ *Connection timed out* |
 | 11 | Registro | Log & Report → Forward Traffic | ✅ Bloqueos registrados como *Deny: policy violation* |
+| 12 | Switch de la DMZ | `ping` desde SW-B al FortiGate, al host y a los tres servidores | ✅ Responden todos |
+| 13 | Switch de la DMZ administrado desde la VLAN 20 | `ping 10.7.43.11` desde la VLAN 20 | ✅ Responde, pasando por el FortiGate |
 
 ### VLAN 20 (administración): web y SSH a los servidores
 
@@ -302,7 +335,7 @@ El repositorio por defecto de Kali (`http.kali.org`) redirige cada descarga a un
 
 ### 11.3 El usuario de la VLAN 10 entraba por SSH
 
-En la primera prueba, el SSH desde la VM Windows 10 **sí entraba** a los servidores. La VM tenía conectado un segundo adaptador de red con salida a Internet, y su tráfico salía por ahí en lugar de pasar por el switch como VLAN 10. **Solución:** se desconectó ese adaptador en VMware; con la VM solo en la VLAN 10, el SSH quedó bloqueado (*Connection timed out*).
+En la primera prueba, el SSH desde la VM Windows 10 **sí entraba** a los servidores. La VM tenía conectado un segundo adaptador de red con salida a Internet, y su tráfico salía por ahí en lugar de pasar por el SW-A como VLAN 10. **Solución:** se desconectó ese adaptador en VMware; con la VM solo en la VLAN 10, el SSH quedó bloqueado (*Connection timed out*).
 
 ### 11.4 El navegador cambiaba a HTTPS
 
@@ -312,22 +345,32 @@ Edge convertía la dirección a `https://` y los servidores web solo publican HT
 
 Con el perfil recién aplicado, las conexiones de la VLAN 10 a los dos servidores web terminaban en *timeout* (ni Caja abría). Se revisaron la política y el perfil, que estaban correctos; en la siguiente sesión de pruebas el Web Filter ya respondía: Caja abre y el Inventario muestra la página de bloqueo.
 
+### 11.6 Las MAC de los servidores cambian en cada arranque
+
+Al configurar port-security en el SW-B se vio que Docker le da una MAC nueva a cada contenedor cada vez que arranca. Con direcciones *sticky*, las viejas se quedarían guardadas y, tras unos cuantos reinicios, el puerto llegaría a su máximo y el switch empezaría a descartar el tráfico de los servidores. **Solución:** en ese puerto las direcciones se aprenden de forma dinámica y caducan a los 10 minutos de inactividad (`aging type inactivity`); el límite de 10 direcciones se mantiene.
+
+### 11.7 El SW-B no respondía a la VLAN 20
+
+Desde la VLAN 20 los servidores respondían, pero el ping a la IP de gestión del SW-B se perdía. En esta imagen de Cisco el enrutamiento viene activado, y con él activado el switch ignora `ip default-gateway`, así que no sabía por dónde devolver la respuesta. **Solución:** `no ip routing`, que además deja al SW-B como un switch solo de capa 2.
+
 ---
 
 ## 12. Scripts y Running-Configs
 
 | Archivo | Descripción |
 |---|---|
-| [`scripts/SW-A_config.txt`](scripts/SW-A_config.txt) | Configuración completa del switch SW-A |
+| [`scripts/SW-A_config.txt`](scripts/SW-A_config.txt) | Configuración completa del switch SW-A (usuarios) |
+| [`scripts/SW-B_config.txt`](scripts/SW-B_config.txt) | Configuración completa del switch SW-B (DMZ) |
 | [`scripts/Fortinet-DMZ_acceso_inicial_CLI.txt`](scripts/Fortinet-DMZ_acceso_inicial_CLI.txt) | Acceso inicial por consola del FortiGate (IP de gestión) |
 | [`scripts/kali_red_docker_y_repositorio.sh`](scripts/kali_red_docker_y_repositorio.sh) | Red del Kali en la DMZ, repositorio fijo e instalación de Docker |
 | [`scripts/kali_preparar_servidores_dmz.sh`](scripts/kali_preparar_servidores_dmz.sh) | Crea las imágenes, la red macvlan y los 3 servidores (Dockerfiles, páginas web y base de datos incluidos) |
 | [`running-configs/Fortinet-DMZ_running-config.conf`](running-configs/Fortinet-DMZ_running-config.conf) | Backup de configuración del FortiGate (GUI → Configuration → Backup) |
 | [`running-configs/SW-A_running-config.txt`](running-configs/SW-A_running-config.txt) | Running-config del SW-A, con `show port-security` y `show ip dhcp binding` |
+| [`running-configs/SW-B_running-config.txt`](running-configs/SW-B_running-config.txt) | Running-config del SW-B, con `show port-security` |
 | [`running-configs/Kali_docker_estado.txt`](running-configs/Kali_docker_estado.txt) | Estado de los contenedores y de la red `dmz_net` |
 | [`diagramas/gen_diagrama.py`](diagramas/gen_diagrama.py) | Script (Python + matplotlib) que genera el diagrama |
 
-> En el backup del FortiGate se redactaron (`<REDACTADO>`) los hashes de contraseñas y las llaves privadas de los certificados, porque el repositorio es público. Las contraseñas del switch son de laboratorio.
+> En el backup del FortiGate se redactaron (`<REDACTADO>`) los hashes de contraseñas y las llaves privadas de los certificados, porque el repositorio es público. Las contraseñas de los switches son de laboratorio.
 
 ---
 
@@ -360,6 +403,9 @@ Con el perfil recién aplicado, las conexiones de la VLAN 10 a los dos servidore
 | 23 | [`23_fgt_log_forward_traffic_deny.png`](screenshots/23_fgt_log_forward_traffic_deny.png) | Logs: bloqueos por Implicit Deny |
 | 24 | [`24_fgt_webfilter_url_bloqueada.png`](screenshots/24_fgt_webfilter_url_bloqueada.png) | Web Filter: URL bloqueada |
 | 25 | [`25_fgt_dns_servers.png`](screenshots/25_fgt_dns_servers.png) | Servicio DNS en port2 y port3 |
+| 26 | [`26_sw-b_ping_y_port_security.png`](screenshots/26_sw-b_ping_y_port_security.png) | SW-B: pings al FortiGate y a los servidores, y port-security |
+| 27 | [`27_sw-b_vlan_brief.png`](screenshots/27_sw-b_vlan_brief.png) | SW-B: VLAN 30 y puertos sin uso |
+| 28 | [`28_vlan20_ping_servidor_y_sw-b.png`](screenshots/28_vlan20_ping_servidor_y_sw-b.png) | VLAN 20: ping a un servidor y al SW-B |
 
 ---
 
@@ -369,4 +415,4 @@ Con el perfil recién aplicado, las conexiones de la VLAN 10 a los dos servidore
 - **Gestión por port1:** por el límite de interfaces, port1 es a la vez la salida a Internet y la red de gestión. En producción la gestión iría en una interfaz dedicada y sin HTTP.
 - **Servidores web por HTTP:** se publican por HTTP (puerto 80) para que el FortiGate pueda mostrar su página de bloqueo sin instalar certificados en el cliente. En producción se usaría HTTPS con inspección SSL y la CA del FortiGate instalada en los equipos.
 - **Servidores como contenedores:** los tres servidores comparten el host Docker, pero cada uno tiene su propia IP y MAC en la DMZ (macvlan), y el FortiGate los trata como equipos distintos.
-- **Tráfico entre VLAN 10 y VLAN 20:** lo enruta el SW-A y no pasa por el FortiGate. La práctica no pide restringirlo; se limitó la administración del switch a la VLAN 20.
+- **Tráfico entre VLAN 10 y VLAN 20:** lo enruta el SW-A y no pasa por el FortiGate. La práctica no pide restringirlo; se limitó la administración de los dos switches a la VLAN 20.

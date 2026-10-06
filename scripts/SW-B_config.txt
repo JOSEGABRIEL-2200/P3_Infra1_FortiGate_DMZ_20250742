@@ -1,0 +1,80 @@
+! =====================================================================
+! SW-B - Switch Cisco IOL L2 - P3 Infraestructura 1 (DMZ)
+! Jose Gabriel Feliz Maria - 2025-0742
+! Switch de la DMZ: une el port3 del FortiGate con los servidores.
+! - VLAN 30 (SERVIDORES-DMZ) 10.7.43.0/28: enlace al FortiGate (e0/0) y
+!   puerto de los servidores (e0/1).
+! - El puerto de los servidores lleva el host de contenedores y los 3
+!   servidores (cada uno con su propia MAC), por eso port-security
+!   permite hasta 10 direcciones. Las MAC de los contenedores cambian en
+!   cada arranque, asi que se aprenden de forma dinamica y caducan a los
+!   10 minutos de inactividad (con sticky se acumularian las viejas).
+! - Puertos sin uso en la VLAN 999 y apagados.
+! - Gestion 10.7.43.11, solo por SSH y solo desde la VLAN 20.
+! Claves de laboratorio. Pegar por partes (PARTE 1 y PARTE 2).
+! =====================================================================
+
+! ---------- PARTE 1: VLAN, puertos y gestion ----------
+enable
+configure terminal
+hostname SW-B
+no ip domain-lookup
+! Switch solo de capa 2: sin enrutamiento (si no, ignora ip default-gateway)
+no ip routing
+vlan 30
+ name SERVIDORES-DMZ
+vlan 999
+ name SIN-USO
+exit
+interface Ethernet0/0
+ description ENLACE-FGT-DMZ-port3
+ switchport mode access
+ switchport access vlan 30
+ spanning-tree portfast edge
+ no shutdown
+interface Ethernet0/1
+ description SERVIDORES-DMZ (host Docker y 3 servidores - Cloud1)
+ switchport mode access
+ switchport access vlan 30
+ switchport port-security maximum 10
+ switchport port-security violation restrict
+ switchport port-security aging time 10
+ switchport port-security aging type inactivity
+ switchport port-security
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+ no shutdown
+interface range Ethernet0/2 - 3
+ description SIN-USO
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+exit
+interface Vlan30
+ description GESTION-SW-B
+ ip address 10.7.43.11 255.255.255.240
+ no shutdown
+exit
+ip default-gateway 10.7.43.1
+
+! ---------- PARTE 2: seguridad basica ----------
+service password-encryption
+enable secret cisco123
+banner motd #SW-B - Acceso restringido. P3 Infra 1 - 2025-0742#
+ip domain-name itla.lab
+username admin privilege 15 secret cisco123
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+no ip http server
+access-list 20 remark Solo la VLAN 20 (administracion) administra el switch
+access-list 20 permit 10.7.42.128 0.0.0.127
+line console 0
+ password cisco
+ login
+ logging synchronous
+line vty 0 4
+ access-class 20 in
+ login local
+ transport input ssh
+end
+write memory
