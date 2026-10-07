@@ -7,7 +7,7 @@
 
 ## 🎥 Video Demostrativo
 
-**[Ver demostración en YouTube](PEGAR_AQUI_EL_LINK_DEL_VIDEO)** ⚠️ *(pendiente de grabar/subir)*
+**[Ver demostración en YouTube](https://youtu.be/VFHK6goldMo)**
 
 En el video se muestra la hora y fecha del sistema, el rostro y la voz del autor, y la demostración de que la topología cumple su objetivo de seguridad: los servidores están aislados en una DMZ, solo la VLAN 20 los administra por SSH, la VLAN 10 ve un aviso de bloqueo al entrar al Sistema de Inventario y la DMZ solo sale a Internet para actualizarse.
 
